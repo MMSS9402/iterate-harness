@@ -1,0 +1,14 @@
+{
+  "name": "iterate-harness",
+  "owner": { "name": "mmss9402" },
+  "description": "iterate-harness 플러그인 자체 호스팅 마켓플레이스",
+  "plugins": [
+    {
+      "name": "iterate-harness",
+      "source": "./",
+      "description": "멀티에이전트 TDD 하네스 (/iterate-harness:iterate)",
+      "category": "workflow",
+      "tags": ["tdd", "multi-agent", "korean"]
+    }
+  ]
+}
