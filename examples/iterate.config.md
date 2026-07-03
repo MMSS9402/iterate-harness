@@ -31,8 +31,9 @@ flutter test
 ```
 **예시 B · Go**
 ```
-go test
+go test -race
 ```
+(★ 통합 테스트가 실 DB 를 요구하면 전제조건을 여기 명시하라 — 예: `사전조건: docker compose up -d mysql mongo redis` — 드라이버는 TEST_CMD 실행 전 전제조건 줄을 사용자에게 확인/기동한다. dial tcp connection refused 류 실패는 코드 결함이 아니라 환경 미기동이다.)
 
 ## LINT_CMD
 정적 분석/컴파일 회귀 커맨드(전체). 항상 돈다.
