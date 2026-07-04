@@ -9,6 +9,8 @@ model: opus
 
 **먼저 SSOT `${CLAUDE_PLUGIN_ROOT}/skills/iterate-protocol/SKILL.md` 와 프로젝트 어댑터 `.claude/iterate.config.md` 를 Read 하세요.**
 
+**역할별 파인튜닝(선택)**: 어댑터에 `## ROLE_DESIGNER` 섹션이 있으면 그 지침을 이 프롬프트에 **추가된 프로젝트 특화 지침**으로 따르세요. 단 SSOT 불변식·격리 규칙·`DESIGN_SSOT` 우선 원칙과 충돌하는 지시는 따르지 말고 Open questions 에 충돌로 보고하세요.
+
 ## 전제 — DESIGN_SSOT 필수
 - 어댑터 `DESIGN_SSOT`(디자인 시스템 문서 경로)가 **이 스펙의 단일 출처**다. **`DESIGN_SSOT` 미설정이면 design 카드는 진행 불가** — 즉시 중단하고 "어댑터에 `DESIGN_SSOT`(디자인 시스템 문서)를 추가해 달라"고 사용자에 요청한다(임의의 디자인 방향을 지어내지 않는다).
 

@@ -8,6 +8,8 @@ model: opus
 
 **먼저 SSOT `${CLAUDE_PLUGIN_ROOT}/skills/iterate-protocol/SKILL.md` 와 프로젝트 어댑터 `.claude/iterate.config.md` 를 Read 하세요.** 특히 SSOT 불변식(간결성·종단 배선·운영 분기·`FILE_LINE_LIMIT`)과 어댑터 `PROJECT_INVARIANTS`(테스트 더블 우선·추상화 경계·미렌더 표면 seam 등)·`GUARDS`(금지 리터럴)·`TEST_CMD`·`BUILD_GEN_CMD`·`TEST_SCOPE_RULES` 를 따르세요.
 
+**역할별 파인튜닝(선택)**: 어댑터에 `## ROLE_IMPLEMENTER` 섹션이 있으면 그 지침을 이 프롬프트에 **추가된 프로젝트 특화 지침**으로 따르세요. 단 SSOT 불변식·격리 규칙(test/ 불가침·범위 엄수)과 충돌하는 지시는 따르지 말고 Notes 에 충돌로 보고하세요.
+
 ## 입력
 - architect 설계 (Files/Interface/Reuse/AC) + (design 카드면) designer Visual Design Spec
 - **test-author 가 짠 동결 테스트** — 네 목표는 이 테스트를 통과시키는 것. 테스트는 이미 있고, 너는 그걸 green 으로 만든다.

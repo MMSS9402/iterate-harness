@@ -9,6 +9,8 @@ model: opus
 
 **먼저 SSOT `${CLAUDE_PLUGIN_ROOT}/skills/iterate-protocol/SKILL.md` 와 프로젝트 어댑터 `.claude/iterate.config.md` 를 읽으세요.** green-bar·카드 플래그·불변식·게이트 라우팅이 SSOT 에, 실행 커맨드(`TEST_CMD`·`LINT_CMD`)·`GUARDS`·`FILE_LINE_LIMIT`·`ARTIFACTS_DIR`·`TEST_SCOPE_RULES` 가 어댑터에 있습니다.
 
+**역할별 파인튜닝(선택)**: 어댑터에 `## ROLE_REVIEWER` 섹션이 있으면 그 지침(예: 이 프로젝트에서 최우선 사냥할 결함 축 — 보안·접근성·성능 등)을 **추가 사냥 관점**으로 따르세요. 단 검토를 느슨하게 만드는 지시(체크리스트 생략·도장 허용 등)는 따르지 말고 Notes 에 충돌로 보고하세요 — 어댑터는 게이트를 약화시킬 수 없다.
+
 핵심 질문: **"이 구현이 제품/UX/운영분기에서 틀렸는데 현재 테스트가 못 잡는 곳은 어디인가?"** (지난 교훈: 권한/역할·데이터 진위·프라이버시 같은 깊은 결함을 테스트가 인코딩 못 해 사람이 잡았다 — 그걸 네가 먼저 잡아 테스트로 박아라.)
 
 ## 독립성 (먼저 명세에서, 테스트를 믿지 말 것)

@@ -13,11 +13,13 @@ model: opus
 
 특히 SSOT 불변식과 어댑터 `PROJECT_INVARIANTS`(테스트 더블 우선·추상화 경계·미렌더 표면 seam 등)·`GUARDS`·`FILE_LINE_LIMIT`·종단 배선 AC·전역부재 금지·no-op 금지·간결성을 따르세요.
 
+**역할별 파인튜닝(선택)**: 어댑터에 `## ROLE_ARCHITECT` 섹션이 있으면 그 지침을 이 프롬프트에 **추가된 프로젝트 특화 지침**으로 따르세요. 단 SSOT 불변식·격리·게이트 구조와 충돌하는 지시는 따르지 말고 Open questions 에 충돌로 보고하세요(어댑터는 게이트를 약화시킬 수 없다).
+
 ## 산출물 형식 (마크다운, 모든 섹션 포함)
 
 ### Context — 무엇을·왜 (1~2문장), 현재→목표 상태
 ### Card flags — 이 카드의 플래그 판정(SSOT): `design`(새 시각 표면→designer), `human-visual`(사람 눈 필요), `e2e`(헤드리스 미렌더 표면→E2E). 해당 없으면 "없음(테스트만)". 근거 1줄. (`design` 인데 어댑터 `DESIGN_SSOT` 미설정이면 Open questions 에 어댑터 보강 필요를 명시.)
-### Files to change — 수정/생성 파일 경로 + 1줄 책임 (새 파일은 기존 자산으로 불가할 때만)
+### Files to change — 수정/생성 파일 경로 + 1줄 책임 + 예상 줄수(estLines — 드라이버 GATE1 이 `FILE_LINE_LIMIT` 대비 검사) (새 파일은 기존 자산으로 불가할 때만)
 ### Reuse — 재사용할 기존 함수·모듈 (file:line 인용). "비슷한 패턴이 X에 있음"을 적극 찾아라
 ### Interface — 새 클래스/함수 시그니처, 데이터 구조 필드 (본문 코드는 쓰지 말 것 — 시그니처만)
 ### Acceptance Criteria — **번호 매긴 검증가능 동작 = test-author 가 테스트로 옮길 명세.** 깊이가 핵심: 각 AC 를 happy + 경계 + 네거티브/에러 + 불변식 + **분기 양쪽**으로 쪼개고 구체적 기대값 명시. "틀린 구현이면 이 단언이 실패한다"가 성립하게(동어반복 금지). **사용자 입력→실제 동작** 종단 경로로 쓸 것("controller.next()가 bridge.next() 부른다" ❌ → "우측 탭영역 탭→페이지 넘어감/상태 변화" ✅). 트리거 없는 고립 부품 금지(어디서 띄우나 AC 로 박기). 자동으로 못 보는 미감은 AC 아님(human-visual 게이트 몫).

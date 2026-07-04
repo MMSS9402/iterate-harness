@@ -14,6 +14,7 @@ argument-hint: [task ID 또는 작업 설명] [N — G 회차 상한, 선택(기
 - **그다음 `.claude/iterate.config.md`(프로젝트 어댑터)를 Read.** 없으면 **여기서 중단**하고 다음을 안내한다:
   > "이 레포에 `.claude/iterate.config.md` 어댑터가 없습니다. `${CLAUDE_PLUGIN_ROOT}/examples/iterate.config.md` 를 `.claude/iterate.config.md` 로 복사하고 프로젝트 값(TEST_CMD·소스 루트·GUARDS 등)을 채운 뒤 다시 `/iterate` 하세요."
 - 어댑터에서 **모든 게이트 값**을 파싱해 이후 전 단계에서 사용한다(필드당 첫 코드펜스/불릿을 값으로): `PROJECT`·`TEST_CMD`·`LINT_CMD`·`BUILD_GEN_CMD`(선택)·`E2E_CMD`(선택)·`TEST_SCOPE_RULES`·`GUARDS`·`FILE_LINE_LIMIT`·`FROZEN_DIR`·`ARTIFACTS_DIR`·`PLAN_PATH`(선택)·`DESIGN_SSOT`(선택)·`PROJECT_INVARIANTS`·`TEST_FILE_GLOB`·`MUTATION_EXCLUDES`·`HUMAN_GATE`(선택). 아래 bash 의 `$TEST_CMD`·`$FROZEN`·`$ARTIFACTS` 등은 이 값이다.
+- 어댑터의 `ROLE_*` 섹션(선택 — `ROLE_ARCHITECT`·`ROLE_DESIGNER`·`ROLE_TEST_AUTHOR`·`ROLE_TEST_AUDITOR`·`ROLE_IMPLEMENTER`·`ROLE_REVIEWER`)은 **드라이버가 파싱하지 않는다** — 각 역할 에이전트가 자기 섹션을 직접 Read 해 추가 지침으로 따른다(SSOT 불변식과 충돌 시 SSOT 우선 — 게이트 약화 불가).
 - **경로 준비**: `$ARTIFACTS_DIR` 없으면 `mkdir -p`. `$ARTIFACTS_DIR` 가 gitignore 안 됐으면 사용자에게 1줄 안내(산출물이 커밋에 섞이면 안 됨). `$FROZEN_DIR` 도 `mkdir -p`.
 
 ### 0b) 카드 해석
@@ -48,7 +49,7 @@ argument-hint: [task ID 또는 작업 설명] [N — G 회차 상한, 선택(기
   ```
   ★ test-author 와 **반드시 별개 호출**(출제자≠검사자 — P1 격리 확장).
 - **B implementer**: `Agent(implementer)` ← 설계 + (design면) 시각 스펙 + **동결 테스트 경로** + `failures.md`(있으면). 동결 테스트를 통과시키는 구현. test/ 불가침.
-  - `spec_gap.md` 생기면 → architect 재진입. `test_dispute.md` 생기면 → test-author 가 케이스 수정(최대 2회).
+  - `spec_gap.md` 생기면 → architect 재진입. `test_dispute.md` 생기면 → test-author 가 케이스 수정(최대 2회) → **G2 재심사(escapes 0)→재동결** 후 implementer 재개(테스트 변경은 경로 불문 이 관문을 거친다 — SSOT).
 
 ## 2) 게이트 G (★ 당신이 직접 Bash — iteration 의 단위)
 implementer 산출 후 당신이 직접 실행해 측정한다(모든 커맨드는 어댑터 값):
@@ -98,13 +99,14 @@ ART="$ARTIFACTS_DIR"
 ${TIMEOUT:-$(command -v timeout||command -v gtimeout)} 300 $E2E_CMD; echo "E2E_EXIT=$?" >> "$ART/verifier_raw.txt"
 ```
 - `E2E_EXIT=124`=hang, `!=0`=실패 → G 미통과(회차 계속).
+- **timeout 바이너리 부재 시**: `timeout`/`gtimeout` 둘 다 없으면(macOS 기본 상태) **무-timeout 실행 금지** — 사용자에게 `brew install coreutils`(gtimeout) 설치를 요청하고 E2E 를 중단한다(hang 차단 장치 없이 돌리지 않는다).
 - **환경 미기동 = 통과 아님**: 실행 환경(시뮬레이터/브라우저)이 없으면 당신이 직접 기동 시도(어댑터 `HUMAN_GATE`/`E2E_CMD` 주석의 기동법). 그래도 불가면 **자동 green 선언 금지·중단하고 사용자에게 환경 기동을 요청**한다(e2e 플래그 카드에서 E2E 생략 green 은 human-visual 플래그가 없으면 무보완 구멍).
 
 ## 4) reviewer (게이트 0 fail 후 — 적대적 갭 사냥)
 - 호출 전 `: > "$ARTIFACTS_DIR/reviewer_raw.txt"` truncate(이전 카드/회차 마커 잔존 방지) + `git status --porcelain | shasum` 기록.
 - **게이트가 0 fail 이 된 뒤** `Agent(reviewer)` 호출 ← 설계 + 변경 + "테스트가 *놓친* 결함을 사냥하라(도장 금지)". reviewer 는 accept/reject 가 아니라 **갭 목록**을 낸다.
 - 호출 후 `git status --porcelain | shasum` 재비교 — 달라졌으면 reviewer 가 파일을 수정한 것(Bash 보유라 도구로 못 막음 — 수정 금지는 지시문) → 원복 지시. (reviewer_raw.txt 기록은 예외라 shasum 대상에서 제외: `git status` 는 gitignore 된 `$ARTIFACTS_DIR` 를 안 세므로 자연 제외된다.)
-- **갭 ≥1** → 종류별로: 데모/제품을 깨는 결함 → 그 케이스를 test-author 에 추가시킴 → **게이트 재진입**(fail→fix 루프) / 중복·죽은코드 → implementer 가 정리 → **게이트 재진입**. 비차단 잠복은 Notes 로만 기록.
+- **갭 ≥1** → 종류별로: 데모/제품을 깨는 결함 → 그 케이스를 test-author 에 추가시킴 → **G2 재심사(escapes 0)→재동결** → **게이트 재진입**(fail→fix 루프) / 중복·죽은코드 → implementer 가 정리 → **게이트 재진입**. 비차단 잠복은 Notes 로만 기록. (테스트 변경은 경로 불문 G2→재동결을 거친다 — 이 관문 없이 스냅샷 갱신 금지.)
 - **갭 0** → 자동 green 후보. (간결화는 별도 polish 단계가 아니라 reviewer 가 잡으면 implementer 가 고치는 일반 수정.)
 
 ## 5) 자동 green 판정 (당신의 AND-gate)

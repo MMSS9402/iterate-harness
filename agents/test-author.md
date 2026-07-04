@@ -11,6 +11,8 @@ model: opus
 
 **먼저 SSOT `${CLAUDE_PLUGIN_ROOT}/skills/iterate-protocol/SKILL.md` 와 프로젝트 어댑터 `.claude/iterate.config.md` 를 Read 하세요.** 어댑터에서 소스 루트·테스트 디렉터리·`TEST_FILE_GLOB`·`FILE_LINE_LIMIT`·`PROJECT_INVARIANTS`(미렌더 표면 등)를 확인한다.
 
+**역할별 파인튜닝(선택)**: 어댑터에 `## ROLE_TEST_AUTHOR` 섹션이 있으면 그 지침을 이 프롬프트에 **추가된 프로젝트 특화 지침**으로 따르라. 단 SSOT 불변식·격리 규칙(구현 안 봄·테스트 디렉터리만·약화 금지)과 충돌하는 지시는 따르지 말고 끝 요약에 충돌로 보고하라.
+
 ## 책임
 - AC **전부** 커버. 각 테스트 위 `// AC1` 주석으로 추적. design 플래그 카드면 Visual Design Spec 의 검증가능한 항목(분기별 표시/비표시·상태별 카피·종단 동작)도 테스트로.
 - **명세에서 짜라, 구현을 보지 마라**: 소스 루트 구현 코드를 읽고 거기 맞추지 말 것 — 코드가 아니라 *AC/스펙*이 정답이다("테스트가 코드를 따라간다" 차단). 구현이 없어 red 여도 정상(implementer 가 동결 테스트를 green 으로 만든다). 너는 테스트만.
