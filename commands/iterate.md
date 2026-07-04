@@ -13,20 +13,20 @@ argument-hint: [task ID 또는 작업 설명] [N — G 회차 상한, 선택(기
 - **먼저 SSOT 를 Read**: `${CLAUDE_PLUGIN_ROOT}/skills/iterate-protocol/SKILL.md`.
 - **그다음 `.claude/iterate.config.md`(프로젝트 어댑터)를 Read.** 없으면 **여기서 중단**하고 다음을 안내한다:
   > "이 레포에 `.claude/iterate.config.md` 어댑터가 없습니다. `${CLAUDE_PLUGIN_ROOT}/examples/iterate.config.md` 를 `.claude/iterate.config.md` 로 복사하고 프로젝트 값(TEST_CMD·소스 루트·GUARDS 등)을 채운 뒤 다시 `/iterate` 하세요."
-- 어댑터에서 **모든 게이트 값**을 파싱해 이후 전 단계에서 사용한다(필드당 첫 코드펜스/불릿을 값으로): `PROJECT`·`TEST_CMD`·`LINT_CMD`·`BUILD_GEN_CMD`(선택)·`E2E_CMD`(선택)·`TEST_SCOPE_RULES`·`GUARDS`·`FILE_LINE_LIMIT`·`FROZEN_DIR`·`ARTIFACTS_DIR`·`PLAN_PATH`(선택)·`DESIGN_SSOT`(선택)·`PROJECT_INVARIANTS`·`TEST_FILE_GLOB`·`MUTATION_EXCLUDES`·`HUMAN_GATE`(선택). 아래 bash 의 `$TEST_CMD`·`$FROZEN`·`$ARTIFACTS` 등은 이 값이다.
-- 어댑터의 `ROLE_*` 섹션(선택 — `ROLE_ARCHITECT`·`ROLE_DESIGNER`·`ROLE_TEST_AUTHOR`·`ROLE_TEST_AUDITOR`·`ROLE_IMPLEMENTER`·`ROLE_REVIEWER`)은 **드라이버가 파싱하지 않는다** — 각 역할 에이전트가 자기 섹션을 직접 Read 해 추가 지침으로 따른다(SSOT 불변식과 충돌 시 SSOT 우선 — 게이트 약화 불가).
+- 어댑터에서 **모든 게이트 값**을 파싱해 이후 전 단계에서 사용한다(필드당 첫 코드펜스/불릿을 값으로): `PROJECT`·`TEST_CMD`·`LINT_CMD`·`BUILD_GEN_CMD`(선택)·`E2E_CMD`(선택)·`TEST_SCOPE_RULES`·`GUARDS`·`FILE_LINE_LIMIT`·`FROZEN_DIR`·`ARTIFACTS_DIR`·`PLAN_PATH`(선택)·`DESIGN_SSOT`(선택)·`PROJECT_INVARIANTS`·`TEST_FILE_GLOB`·`MUTATION_EXCLUDES`·`HUMAN_GATE`(선택)·`EXPLORE_QA`(선택). 아래 bash 의 `$TEST_CMD`·`$FROZEN`·`$ARTIFACTS` 등은 이 값이다.
+- 어댑터의 `ROLE_*` 섹션(선택 — `ROLE_ARCHITECT`·`ROLE_DESIGNER`·`ROLE_TEST_AUTHOR`·`ROLE_TEST_AUDITOR`·`ROLE_IMPLEMENTER`·`ROLE_REVIEWER`·`ROLE_EXPLORER`)은 **드라이버가 파싱하지 않는다** — 각 역할 에이전트가 자기 섹션을 직접 Read 해 추가 지침으로 따른다(SSOT 불변식과 충돌 시 SSOT 우선 — 게이트 약화 불가).
 - **경로 준비**: `$ARTIFACTS_DIR` 없으면 `mkdir -p`. `$ARTIFACTS_DIR` 가 gitignore 안 됐으면 사용자에게 1줄 안내(산출물이 커밋에 섞이면 안 됨). `$FROZEN_DIR` 도 `mkdir -p`.
 
 ### 0b) 카드 해석
 - **인자 파싱**: `$ARGUMENTS` 에서 따옴표 토큰 = ID 또는 작업 설명, **맨 뒤 정수 = N(G 회차 상한, 기본 10)**.
 - **`PLAN_PATH` 설정 시**: ID 면 원장에서 카드 블록만 읽는다 — **파일이 크면 통째 Read 금지**: Grep 으로 카드 헤더(`### .* <ID>`) 줄번호를 찾아 그 offset 부터 카드 블록만 Read(드라이버 컨텍스트 보호). 못 찾으면 알리고 중단.
 - **`PLAN_PATH` 미설정 시(직접 작업 문자열 모드)**: 인자 문자열 자체가 작업이다(원장 조회·완료기록 갱신 없음 — §7 스킵, §8 보고만).
-- **카드 플래그 판정**: `design`(새 시각 표면)·`human-visual`(사람 눈 필요)·`e2e`(헤드리스 미렌더 표면). 카드에 명시 없으면 작업 성격으로 판정. 모호하면 사용자 1줄 확인. **`design` 인데 `DESIGN_SSOT` 미설정, 또는 `e2e` 인데 `E2E_CMD` 미설정 → 어댑터 보강을 요청하고 중단.**
+- **카드 플래그 판정**: `design`(새 시각 표면)·`human-visual`(사람 눈 필요)·`e2e`(헤드리스 미렌더 표면)·`explore`(사용자 흐름이 얽힌 화면·상태 많은 표면 — 명세 밖 탐색 QA 가치). 카드에 명시 없으면 작업 성격으로 판정. 모호하면 사용자 1줄 확인. **`design` 인데 `DESIGN_SSOT` 미설정, `e2e` 인데 `E2E_CMD` 미설정, 또는 `explore` 인데 `EXPLORE_QA` 미설정 → 어댑터 보강을 요청하고 중단.**
 
 ## 1) 기계 루프 (사람 없음)
 각 Phase 시작·종료를 한 줄로 보고.
 
-**★ 역할 에이전트는 플러그인 네임스페이스**: 이 문서의 `Agent(architect)` 표기는 축약이다 — 실제 `subagent_type` 은 `iterate-harness:architect`·`iterate-harness:designer`·`iterate-harness:test-author`·`iterate-harness:test-auditor`·`iterate-harness:implementer`·`iterate-harness:reviewer` 다(플러그인 에이전트는 항상 `플러그인명:이름` 으로 노출된다). `Explore` 만 빌트인 그대로다.
+**★ 역할 에이전트는 플러그인 네임스페이스**: 이 문서의 `Agent(architect)` 표기는 축약이다 — 실제 `subagent_type` 은 `iterate-harness:architect`·`iterate-harness:designer`·`iterate-harness:test-author`·`iterate-harness:test-auditor`·`iterate-harness:implementer`·`iterate-harness:reviewer`·`iterate-harness:explorer` 다(플러그인 에이전트는 항상 `플러그인명:이름` 으로 노출된다). `Explore` 만 빌트인 그대로다.
 
 **★ 모든 `Agent()` 호출은 포그라운드**: 매번 `run_in_background: false` 를 명시한다(Agent 도구 기본값은 백그라운드다 — 명시 없으면 사용자가 원치 않는 백그라운드로 뜬다). 완료된 에이전트를 `SendMessage` 로 재개하지 마라 — 그 경로는 항상 백그라운드고 포그라운드 옵션이 없다. 반려/바운스(test-author 보강, reviewer 재확인 등)도 매번 **새 `Agent` 호출**로 띄우고, 필요한 맥락은 프롬프트로 전달한다(에이전트가 디스크의 현재 테스트/코드를 직접 Read). `Workflow` 등 백그라운드 도구도 이 하네스에선 금지.
 
@@ -107,7 +107,16 @@ ${TIMEOUT:-$(command -v timeout||command -v gtimeout)} 300 $E2E_CMD; echo "E2E_E
 - **게이트가 0 fail 이 된 뒤** `Agent(reviewer)` 호출 ← 설계 + 변경 + "테스트가 *놓친* 결함을 사냥하라(도장 금지)". reviewer 는 accept/reject 가 아니라 **갭 목록**을 낸다.
 - 호출 후 `git status --porcelain | shasum` 재비교 — 달라졌으면 reviewer 가 파일을 수정한 것(Bash 보유라 도구로 못 막음 — 수정 금지는 지시문) → 원복 지시. (reviewer_raw.txt 기록은 예외라 shasum 대상에서 제외: `git status` 는 gitignore 된 `$ARTIFACTS_DIR` 를 안 세므로 자연 제외된다.)
 - **갭 ≥1** → 종류별로: 데모/제품을 깨는 결함 → 그 케이스를 test-author 에 추가시킴 → **G2 재심사(escapes 0)→재동결** → **게이트 재진입**(fail→fix 루프) / 중복·죽은코드 → implementer 가 정리 → **게이트 재진입**. 비차단 잠복은 Notes 로만 기록. (테스트 변경은 경로 불문 G2→재동결을 거친다 — 이 관문 없이 스냅샷 갱신 금지.)
-- **갭 0** → 자동 green 후보. (간결화는 별도 polish 단계가 아니라 reviewer 가 잡으면 implementer 가 고치는 일반 수정.)
+- **갭 0** → (explore 플래그면 §4b 로 / 아니면) 자동 green 후보. (간결화는 별도 polish 단계가 아니라 reviewer 가 잡으면 implementer 가 고치는 일반 수정.)
+
+## 4b) explorer (explore 플래그 카드만 — reviewer 갭 0 후·자동 green 확정 직전)
+- 전제: 어댑터 `EXPLORE_QA` 설정(미설정이면 Step 0b 에서 이미 차단). 호출 전 `git status --porcelain | shasum` 기록 + `mkdir -p "$ARTIFACTS_DIR/explore"`.
+- `Agent(explorer)` 호출 ← 카드/AC 요약 + 변경 파일 목록 + 어댑터 `EXPLORE_QA`(기동법·조작 도구·초점) + **시간상자**(기본 탐색 흐름 5~8개). explorer 는 명세 밖(인접 흐름·빈/대량 데이터·중단·역행·연타·경계 밖 입력)을 실물로 구동하고, 일회성 탐색 스크립트·증거는 `$ARTIFACTS_DIR/explore/` 에만 쓴다(동결 glob 밖 — test/·소스 루트 금지).
+- 호출 후 shasum 재비교 — 달라졌으면 explorer 가 제품/테스트를 수정한 것 → 원복 지시(ARTIFACTS_DIR 는 gitignore 라 자연 제외).
+- **실행 환경 미기동 = 통과 아님**: explorer 가 기동 불가를 보고하면 당신이 기동을 시도하고, 그래도 불가면 **탐색 생략 green 선언 금지·중단하고 사용자에게 환경 기동 요청**(e2e 와 동일 원칙).
+- **결함 ≥1** → 기계로 환원 가능한 결함은 재현 경로를 test-author 에 케이스로 추가시킴 → **G2 재심사(escapes 0)→재동결** → **게이트 재진입**(fail→fix 루프, 회차 계속). 환원 불가(순수 미감·실기기 한정)는 human-visual 게이트 몫으로 Notes 분리.
+- **결함 0** → 자동 green 후보.
+- 재실행 회차에서: 직전 explore 이후 변경이 탐색 표면과 무관(순수 내부 로직 수정)하면 직전 탐색 결과를 재사용할 수 있다(churn 금지) — 표면이 바뀌었으면 재탐색.
 
 ## 5) 자동 green 판정 (당신의 AND-gate)
 ```
@@ -120,6 +129,7 @@ ${TIMEOUT:-$(command -v timeout||command -v gtimeout)} 300 $E2E_CMD; echo "E2E_E
             AND 줄-상한 위반 0 AND 어댑터 GUARDS 위반 0
             AND MUT_SURVIVED==0 (Mutation 게이트 생존 0, INVALID 제외)
             AND reviewer 갭 0
+            AND (explore 없음 OR explorer 결함 0)
 ```
 자동 green 까지 루프, **MAX_ITERS = N(기본 10) 하드 상한**. 초과·같은 fail 2회 연속 동일원인 미해결 시 중단·사용자 개입.
 
@@ -138,9 +148,10 @@ ${TIMEOUT:-$(command -v timeout||command -v gtimeout)} 300 $E2E_CMD; echo "E2E_E
 ## 8) 종료 보고
 ```
 ## Iteration 완료
-**카드/작업**: <ID 또는 설명> · **플래그**: [design/human-visual/e2e] · **회차**: X (테스트 N개, 1회차 M fail → 0 fail)
+**카드/작업**: <ID 또는 설명> · **플래그**: [design/human-visual/e2e/explore] · **회차**: X (테스트 N개, 1회차 M fail → 0 fail)
 **변경 파일**: …
-**게이트**: 테스트 N/N · LINT 무경고 · 줄상한·GUARDS OK · E2E(해당 시) K/K · mutation 생존 0 · reviewer 갭 0
+**게이트**: 테스트 N/N · LINT 무경고 · 줄상한·GUARDS OK · E2E(해당 시) K/K · mutation 생존 0 · reviewer 갭 0 · explore(해당 시) 결함 0
+**explorer 발견→테스트화**: <있었으면 무엇> | 없음 | (explore 아님)
 **reviewer 발견→테스트화**: <있었으면 무엇> | 없음
 **완료 상태**: done | verification passed (실기 시각확인 대기)
 **특이사항**: 1~2줄(잠복/후속 Note 포함)
