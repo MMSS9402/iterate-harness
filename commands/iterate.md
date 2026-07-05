@@ -34,7 +34,6 @@ argument-hint: [task ID 또는 작업 설명] [N — G 회차 상한, 선택(기
 - **A architect**: `Agent(architect)` ← 작업 + Explore 결과. 설계+AC+**카드 플래그** 보존.
   - **GATE1(당신 직접)**: 설계에 코드 본문 없음 + estLines 전부 ≤ `$FILE_LINE_LIMIT` 확인. 위반→architect 재호출.
 - **designer (design 플래그면)**: `Agent(designer)` ← 작업 + architect 설계 + `$DESIGN_SSOT`. 시각 스펙 산출. **구현 전**에 둬 구조를 한 번에 맞춘다. (design 아니면 생략.) 디자이너 Open Question(새 토큰 등)은 당신이 사용자에 확인.
-- **SPEC GATE (new-UX 카드만·사람 1회, SSOT §스펙 게이트)**: 사용자-체감 UX 가 새로 생기거나 인터랙션 모델이 바뀌는 카드(신규 화면/플로우·입력 방식 변경·데이터 노출 정책 변경)면, **test-author 전에** 당신이 architect+designer 산출을 사용자 언어 요약(화면이 어떻게 보이고 동작하는지 5~8줄 + 핵심 UX 결정 2~4개)으로 제시하고 1회 확인받는다. 방향 수정 → architect 재계획(테스트·구현 전이라 저렴·회차 카운트 없음). 생략: 순수 로직 카드·기존 UI 소폭 보강·직전 human gate 에서 확정된 스펙을 소화하는 재실행 라운드. 이 게이트는 방향 확인일 뿐 — 맨 끝 human-visual 시각확인을 대체하지 않는다.
 - **T test-author**: `Agent(test-author)` ← AC + (design면) 시각 스펙. **모든 카드.** AC 를 독립 블랙박스 테스트로(구현 안 봄·명세에서). 부수효과 되읽기·분기 양쪽·불변식 구체값(불변식 11).
   - **소스 루트 불가침 가드(당신 직접)**: 호출 전후로 `git status --porcelain <소스 루트> | shasum` 을 비교 — 달라졌으면 test-author 가 소스 루트를 건드린 것(도구상 Write/Edit 가 소스에도 미침) → 원복 지시 후 재호출.
 - **G2 test-auditor (동결 전·독립)**: `Agent(test-auditor)` ← AC + (design면) 시각 스펙 + test-author 가 쓴 테스트 파일(**구현 안 봄**). "틀린 구현이 빠져나갈 변형"을 적대 검사. **escapes ≥1 → `Agent(test-author)` 재호출**(그 변형 잡는 케이스 추가, 최대 2회) → 재검사. **반려 2회 소진 후에도 escapes ≥1 → 중단·사용자 개입**(AC 가 테스트 불가능하게 쓰였을 가능성 — architect 재계획 여부를 사용자와 결정). **escapes 0 → 동결**:
@@ -108,6 +107,7 @@ ${TIMEOUT:-$(command -v timeout||command -v gtimeout)} 300 $E2E_CMD; echo "E2E_E
 - **게이트가 0 fail 이 된 뒤** `Agent(reviewer)` 호출 ← 설계 + 변경 + "테스트가 *놓친* 결함을 사냥하라(도장 금지)". reviewer 는 accept/reject 가 아니라 **갭 목록**을 낸다.
 - 호출 후 `git status --porcelain | shasum` 재비교 — 달라졌으면 reviewer 가 파일을 수정한 것(Bash 보유라 도구로 못 막음 — 수정 금지는 지시문) → 원복 지시. (reviewer_raw.txt 기록은 예외라 shasum 대상에서 제외: `git status` 는 gitignore 된 `$ARTIFACTS_DIR` 를 안 세므로 자연 제외된다.)
 - **갭 ≥1** → 종류별로: 데모/제품을 깨는 결함 → 그 케이스를 test-author 에 추가시킴 → **G2 재심사(escapes 0)→재동결** → **게이트 재진입**(fail→fix 루프) / 중복·죽은코드 → implementer 가 정리 → **게이트 재진입**. 비차단 잠복은 Notes 로만 기록. (테스트 변경은 경로 불문 G2→재동결을 거친다 — 이 관문 없이 스냅샷 갱신 금지.)
+  - **★ 동형 확장(일괄 시정)**: 갭을 재계획으로 넘기기 전에 당신이 architect 프롬프트에 **"이 갭과 동형인 결함 표면(같은 원인·다른 소비처)을 전수 나열해 한 회차에 묶어라"** 를 명시한다. reviewer 가 Notes(비차단)로 분류한 항목 중 갭과 같은 원인 계열은 재검토 대상에 포함시킨다 — 같은 원인의 표면을 회차마다 하나씩 발견해 재파이프라인을 반복하는 것이 최대 낭비 지점이다(실측: 동형 갭 분할 발견 1회 = 재파이프라인 1회 ≈ 1시간).
 - **갭 0** → (explore 플래그면 §4b 로 / 아니면) 자동 green 후보. (간결화는 별도 polish 단계가 아니라 reviewer 가 잡으면 implementer 가 고치는 일반 수정.)
 
 ## 4b) explorer (explore 플래그 카드만 — reviewer 갭 0 후·자동 green 확정 직전)
