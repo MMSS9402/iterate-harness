@@ -70,6 +70,7 @@ $FROZEN_DIR/  (★ 레포 밖 — 기본 $HOME/.iterate-harness/<repo-slug>/froz
 A architect    설계 + AC + 카드 플래그        ◄──────────── 게이트 실패 시 여기로 (전체 재실행)
    └ GATE1(드라이버): 설계에 코드 본문 없음 + 예상 줄수 ≤ FILE_LINE_LIMIT
 (design?) designer   시각 스펙 — 구현 전에 구조를 한 번에 맞춤
+(new-UX?) SPEC GATE  사람 1회: 스펙 요약 확인(방향 수정 → architect, 테스트·구현 전이라 저렴)
 T test-author  AC → 독립 블랙박스 테스트 (구현이 없으니 red 가 정상)
 G2 test-auditor  "틀린 구현이 빠져나갈 변형" 적대 심사
    ├ escapes ≥1 → test-author 보강 (최대 2회, 소진 시 중단·사용자 개입)

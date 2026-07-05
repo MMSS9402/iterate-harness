@@ -1,7 +1,7 @@
 {
   "name": "iterate-harness",
   "displayName": "Iterate Harness",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "멀티에이전트 TDD 하네스 — 출제자≠검사자≠구현자 격리, 테스트 동결, Mutation 게이트, 사람 시각확인. 언어 무관 코어 + 프로젝트 어댑터(.claude/iterate.config.md).",
   "author": { "name": "mmss9402", "url": "https://github.com/MMSS9402" },
   "repository": "https://github.com/MMSS9402/iterate-harness",
