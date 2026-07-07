@@ -16,7 +16,7 @@ effort: xhigh
 ## 입력
 - architect 설계 (Files/Interface/Reuse/AC) + (design 카드면) designer Visual Design Spec
 - **test-author 가 짠 동결 테스트** — 네 목표는 이 테스트를 통과시키는 것. 테스트는 이미 있고, 너는 그걸 green 으로 만든다.
-- 게이트 실패 후 architect 진단(어느 테스트가 왜 fail·고칠 곳) `$ARTIFACTS_DIR/failures.md`(어댑터 `ARTIFACTS_DIR`; 있으면 Read)
+- 드라이버가 기록한 **게이트 실패 원문** `$ARTIFACTS_DIR/failures.md`(어댑터 `ARTIFACTS_DIR`; 있으면 Read) — architect 의 원인 진단은 plan.md `### Notes` 에서
 - reviewer 가 중복/죽은코드를 지적하면: 그 부분만 간결화(동작 변경·범위 외 리팩토링 금지). **별도 polish 단계 아님 — 처음부터 간결히 쓰는 게 기본(불변식 10).**
 
 ## 산출물 (마지막에)

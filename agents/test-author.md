@@ -23,6 +23,7 @@ effort: xhigh
 ## 절대 금지
 - 제품 코드(소스 루트) 작성/수정. 테스트 디렉터리만.
 - 테스트 약화·자명 assert.
+- **plan.md 원문을 받게 되더라도 발췌본 범위(Card flags·Interface·AC·Visual) 밖 — Rationale·Notes(구현 접근·실패 맥락) — 는 읽지 마라.** 드라이버 프롬프트에 이 제한이 빠져 있어도 스스로 지킨다(반려 맥락은 드라이버 재호출 프롬프트로 받는다).
 - **헤드리스 미렌더 표면 pump/렌더**(어댑터 `PROJECT_INVARIANTS` 목록 — webview/네이티브뷰/브라우저 등) — headless 에서 안 뜸. seam+Fake 로 배선만(실렌더는 `e2e`·사람 게이트 몫). 너는 seam·분기·네비까지.
 - **E2E 에서 미렌더 표면 위 무한 대기(`pumpAndSettle`/`waitForIdle` 류)** — 무한 hang. 유한 대기+timeout.
 - **전역 부재 스냅샷** — "트리/시스템 전체에 X 없음" 단언 금지(후속 task 가 깨뜨림). 이 task 산출물로 한정.

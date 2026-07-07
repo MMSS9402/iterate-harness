@@ -23,6 +23,16 @@
 - **mutation 로그 위생**: 변형당 테스트 출력을 `$ARTIFACTS_DIR/mutlogs/` 로 리다이렉트, 트랜스크립트에는 exit 마커 한 줄만 — 변형 N개 × 전체 테스트 로그의 드라이버 컨텍스트 유입 차단. kill/INVALID 분류는 exit≠0 인 로그의 tail 만 Read.
 - reviewer 의 verdict.json 자가채점 잔재 제거, polish 재확인 섹션 제거 등 구세대 잔재 정리.
 
+### 독립성 보강 (2차 감사)
+- **발췌본 전달**: 출제자(test-author)·검사자(test-auditor·reviewer)에게 plan.md 원문 대신 드라이버 발췌본 `spec.md`(Card flags·Interface·AC·Visual)를 전달 — architect 의 Rationale(구현 접근)·Notes(실패 프레이밍) 노출 차단.
+- **검사자 커밋먼트 규격**: test-auditor 는 테스트 열람 전 명세에서 `Mutant checklist` 를 먼저 고정, reviewer 는 diff/테스트 열람 전 `Expected` 를 먼저 고정 — 드라이버가 산출물 형식으로 검증.
+- **G2 확장**: AC 형식 감사(0단계 — 불변식 6/8 위반형·검증불가 AC 지목, ≥1 이면 architect 재계획 라우팅) + `Mutation targets` 산출(escapes 0 이어도 필수 — mutation 게이트의 우선순위 메뉴, 드라이버만 보유).
+- **바운스 재호출 전달물 규격**: 검사자 산출물의 발견 항목만 전달하고 판정 서사(Verdict·Covered·제안 케이스)와 피검사자의 수정 설명은 전달 금지 — G2 재검사는 fix 확인이 아니라 전체 재심사.
+- **Notes-only 스킵 예외**: mutation 생존·reviewer 갭·explorer 결함 환원(테스트 얕음) 시 plan diff 가 Notes-only 여도 test-author→G2→재동결은 반드시 흘린다(스킵 허용은 designer 뿐).
+- **동결 다이제스트 컴팩션 폴백**: 컨텍스트 앵커 소실 시 iteration_log 의 저신뢰 사본·디스크 대조 + 사용자 고지 후 G2 재심사→재동결로 엄격성 재수립.
+- **감사 추적**: 검사자 판정 원문 영속화(`g2_verdicts.md`·`reviewer_verdicts.md`) + 독립성 위반 인시던트 기록(`violations.md`, 카드 간 누적) + mutation-kill-rate 수치를 영속 기록 3곳(iteration_log·완료기록·종료 보고)에 기재.
+- 어댑터 영향: 없음(어댑터 필드 변경 없음).
+
 ### 어댑터 영향
 - **필드 신설(조치 필요)**: `TEST_SUPPORT_GLOBS` — 기존 어댑터에 헤딩을 추가해야 한다. 테스트 헬퍼·픽스처·Fake 패턴을 선언하고, 없으면 `(없음)`. 이 패턴 밖에 test-author 가 지원 파일을 만들면 드라이버가 반려한다.
 - 그 외 필드 변경 없음. 선택 필드 sentinel 규칙(코드펜스 부재·빈 값·`(없음)` = 미설정)이 명문화됐다.
