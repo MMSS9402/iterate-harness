@@ -4,7 +4,7 @@
 >
 > **설치**: 이 파일을 대상 레포의 `.claude/iterate.config.md` 로 복사하고, 각 필드에서 **당신 스택에 맞는 예시 블록 하나만 남겨**(다른 건 삭제) 값을 맞춰라. 아래 세 예시(**A · Flutter 모바일** / **B · Go 백엔드** / **C · React/TS 웹**)는 스키마가 스택별로 어떻게 채워지는지 보여주기 위한 것이다.
 >
-> **드라이버 파싱 계약**: 드라이버는 `## FIELDNAME` 헤딩을 찾고, 그 아래 **첫 코드펜스(```)** 를 스칼라 값으로, **불릿/`### GUARD:` 하위블록**을 리스트 값으로 읽는다. **실제 어댑터에는 필드당 한 블록만** 둔다(템플릿은 예시가 여럿이라 A 를 읽는다). `(선택)` 표시 필드는 비워도 되며, 비면 해당 기능이 꺼진다(design/e2e/원장/골든).
+> **드라이버 파싱 계약**: 드라이버는 `## FIELDNAME` 헤딩을 찾고, 그 아래 **첫 코드펜스(```)** 를 스칼라 값으로, **불릿/`### GUARD:` 하위블록**을 리스트 값으로 읽는다. **실제 어댑터에는 필드당 한 블록만** 둔다(템플릿은 예시가 여럿이라 A 를 읽는다). **sentinel 규칙**: `(선택)` 표시 필드는 **코드펜스 부재·빈 펜스·`(없음)`** 세 경우 모두 "미설정"으로 파싱되며, 미설정이면 해당 기능이 꺼진다(design/e2e/원장/골든/탐색QA).
 >
 > **zsh 함정(가드·동결 커맨드 공통)**: `shasum $(cat filelist)`·`gofmt -l $(...)` 처럼 **명령치환 결과를 unquoted 확장**하면 zsh 는 기본적으로 단어분리를 안 해 파일명이 한 덩어리가 된다. 반드시 **xargs 파이프**로: `... | xargs shasum`, `... | xargs gofmt -l`.
 
@@ -168,7 +168,7 @@ npx playwright test --reporter=line
 ```
 
 ## FROZEN_DIR
-동결 스냅샷 위치 — **반드시 레포 밖**(implementer 쓰기 범위 차단, P1 격리). 기본 `$HOME/.iterate-harness/<repo-slug>/frozen_tests`. `repo-slug` = git 최상위 basename(공백/특수문자→`-`): `basename "$(git rev-parse --show-toplevel)" | tr -c 'A-Za-z0-9._-' '-'`. git 밖이면 현재 디렉터리 basename.
+동결 스냅샷 위치 — **반드시 레포 밖**(P1 격리). 레포 밖 배치는 필요조건일 뿐(git-status 가시성 제거) — 기계 백스톱은 드라이버가 대화 컨텍스트에 고정하는 스냅샷 다이제스트다(디스크는 전부 implementer 쓰기 가능). 기본 `$HOME/.iterate-harness/<repo-slug>/frozen_tests`. `repo-slug` = git 최상위 basename(공백/특수문자→`-`): `basename "$(git rev-parse --show-toplevel)" | tr -c 'A-Za-z0-9._-' '-'`. git 밖이면 현재 디렉터리 basename.
 
 **예시 A · Flutter**
 ```
@@ -198,7 +198,7 @@ $HOME/.iterate-harness/my-web-app/frozen_tests
 ```
 harness/PLAN.md
 ```
-**예시 B · Go / 예시 C · Web** (원장 없음 — 직접 작업 모드. 이 필드를 비워둠)
+**예시 B · Go / 예시 C · Web** (원장 없음 — 직접 작업 모드. 이 필드를 비워둠 — 펜스 삭제 또는 `(없음)`, 어느 쪽이든 미설정)
 ```
 (없음)
 ```
@@ -210,7 +210,7 @@ harness/PLAN.md
 ```
 DESIGN.md
 ```
-**예시 B · Go** (백엔드 — UI 없음, 비움)
+**예시 B · Go** (백엔드 — UI 없음. 이 필드를 비워둠 — 펜스 삭제 또는 `(없음)`, 어느 쪽이든 미설정)
 ```
 (없음)
 ```
@@ -257,6 +257,23 @@ test/**/*_test.dart
 **예시 C · Web** (find 변환: `find src \( -name '*.test.ts' -o -name '*.test.tsx' \)` — playwright 스펙을 tests/e2e/ 에 두면 그것도 포함: `find src tests/e2e ...`)
 ```
 src/**/*.test.{ts,tsx}
+```
+
+## TEST_SUPPORT_GLOBS
+테스트 **지원 파일** 패턴 — 헬퍼·픽스처·Fake·테스트 유틸. 동결 스냅샷은 **TEST_FILE_GLOB ∪ TEST_SUPPORT_GLOBS** 매칭 파일 전체다: TEST_FILE_GLOB 은 "실행할 테스트" 열거용이고, 동결 범위는 test-author 가 쓸 수 있는 모든 것(지원 파일 포함)이어야 한다. **test-author 가 이 패턴 밖에 지원 파일을 만들면 드라이버가 반려한다.** 지원 파일이 없으면 `(없음)` 을 쓴다.
+
+**예시 A · Flutter** (별도 테스트 트리 — test/ 전체가 test-author 영역이라 트리 통째)
+```
+test/**
+```
+**예시 B · Go** (co-located `_test.go` — 공용 테스트 유틸 패키지만 별도 선언)
+```
+**/internal/testutil/**
+```
+**예시 C · Web** (co-located `*.test.*` — 테스트 유틸 + 픽스처 디렉터리)
+```
+src/test-utils/**
+src/**/__fixtures__/**
 ```
 
 ## MUTATION_EXCLUDES

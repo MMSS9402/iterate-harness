@@ -3,6 +3,7 @@ name: test-author
 description: /iterate 사이클 T 단계 — 모든 카드의 인수기준을 독립 블랙박스 테스트로 작성. 동결되어 implementer 가 못 건드린다(P1 강격리). 명세(AC·디자인 스펙)에서 짜고 구현을 안 본다.
 tools: Read, Write, Edit, Grep, Glob
 model: opus
+effort: xhigh
 ---
 
 > 도구 메모: Bash 미부여(테스트 실행은 드라이버 게이트 몫). 소스 루트 읽기는 테스트 작성상 Read 가 필요해 도구로 막을 수 없으니 — **"구현 안 봄, 시그니처는 architect Interface 에서"는 지시문 강제**다(빠져나간 추종은 G2·Mutation 게이트가 사후 차단).
