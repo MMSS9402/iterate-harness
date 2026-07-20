@@ -6,6 +6,27 @@
 
 각 버전에는 **어댑터 영향** 소절을 둔다 — 대상 레포의 `.claude/iterate.config.md` 에 필드 추가/변경이 필요한지가 사용자 업그레이드 비용의 전부이기 때문이다.
 
+## [0.8.0] - 2026-07-20
+
+토큰·시간 최적화 릴리스 — 실측(반복 회차가 비용의 대부분·explorer 회당 10만+ 토큰·designer 스킵 판정 비용) 기반으로 **기본 사이클을 lean 으로 경량화**하고 QA·디자인을 별도 배치 명령으로 분리했다. 기계 백스톱(동결 체크섬·mutation·GUARDS·LINT)은 모드 무관 동일 — 조절 대상은 LLM 심사의 반복 횟수뿐이다.
+
+### Added
+- **실행 모드 lean(기본)/deep**: `/iterate <카드> [N] [deep]`. lean = G2 델타 심사·reviewer 본심사 1회·explorer 큐·designer 캐시. deep = 기존 완전 심사(전체 G2 재심사·reviewer 재사냥·explorer 인라인). SSOT §실행 모드 신설.
+- **`/iterate-qa`(신규 명령)**: lean 이 `qa_queue.md` 에 등록한 explore 카드들을 환경 1회 기동으로 묶어 배치 탐색. 카드×초점 fan-out 에 **Workflow 병렬 허용**(하네스 유일 예외 — 격리 규칙은 fan-out 에이전트에도 동일 적용, 게이트 판정 권한은 불이동). 카드 간 교차 상호작용 항목 포함(단일 카드 탐색이 원리상 못 보는 것). 결함은 발견·기록까지 — 테스트 환원은 해당 카드 `/iterate` 재실행이 담당.
+- **`/iterate-design`(신규 명령)**: designer 를 사이클 밖에서 화면군 단위 1회 실행 → `visual_spec` 산출·`design_cache.md` 등록(DESIGN_SSOT shasum 이 캐시 키). 디자인 확정 프로젝트의 사이클 비용 상각.
+- **designer 스펙 캐시**: design 카드라도 (a) 화면군 visual_spec 존재 (b) DESIGN_SSOT 다이제스트 불변 (c) 기존 화면군 확장이면 designer 스킵·스펙 재사용(드라이버 기계 판정).
+
+### Changed
+- **G2 델타 심사(lean·재심사 한정)**: 카드 최초 G2 는 전체 심사 유지. 재심사는 변경·신규 테스트 파일 + 해당 AC + 기존 커버리지와의 상호작용(매트릭스) + 직전 Escapes 회귀 부록으로 한정 — 체크섬 불변 파일의 직전 escapes-0 판정은 유효 재사용. deep 은 매번 전체.
+- **reviewer 수렴 규칙(lean)**: 본심사 카드당 1회 — 갭이 전부 환원되어 게이트 green 이면 해소 판정(재사냥 없음·G2 델타+mutation 백스톱). 환원 과정에서 구현이 새 표면을 추가했으면 그 표면 한정 재검토 1회 허용. deep 은 갭 0 까지 반복.
+- **explorer 분리(lean)**: 사이클 인라인 → 자동 green 시 `qa_queue.md` 등록(상태 `green (QA 대기)`), `/iterate-qa` 가 배치 소비. deep 또는 카드 `explore-inline` 명시 시 기존 인라인 유지.
+- **Workflow 금지 규정 개정**: 사이클 안 금지는 유지(의존 체인·게이트 직렬 책임), `/iterate-qa` 배치 fan-out 만 허용.
+- **green-bar 갱신**: reviewer 항목 = 모드별 해소 조건, explore 항목 = lean 큐 등록/deep 결함 0. explore 큐 카드의 자동 green 은 `green (QA 대기)` — 배치가 결함 0 확인 시 done.
+- **Explore(빌트인) lean 완화**: 새 모듈 영역을 만질 때만 — 기존 영역 재작업이면 드라이버 Grep 2~3회로 대체 가능.
+
+### 어댑터 영향
+- **없음(필드 추가 불요)** — 기존 `EXPLORE_QA`·`DESIGN_SSOT` 를 그대로 쓴다. `qa_queue.md`·`design_cache.md`·`qa_findings.md` 는 기존 `ARTIFACTS_DIR` 안에 생긴다(이미 gitignore). 기존 카드 원장의 `explore` 플래그 의미가 "인라인 탐색"→"큐 등록(기본)"으로 바뀌므로, 인라인을 유지하고 싶은 카드에만 `explore-inline` 표기 추가.
+
 ## [0.7.0] - 2026-07-07
 
 3차 감사(드라이-런 시뮬레이션·누적 편집 회귀) 반영 릴리스 — 드라이버가 절차서대로 굴렀을 때 실제로 막히는 지점을 수리했다.

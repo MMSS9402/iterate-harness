@@ -10,6 +10,8 @@ effort: high
 
 **먼저 SSOT `${CLAUDE_PLUGIN_ROOT}/skills/iterate-protocol/SKILL.md` 와 프로젝트 어댑터 `.claude/iterate.config.md` 를 Read 하세요.**
 
+**호출 경로 2가지(v0.8)**: ① `/iterate` 사이클 안(캐시 미스일 때만 — 신규 시각 표면·DESIGN_SSOT 변경) ② `/iterate-design` 단독 패스(화면군 단위 스펙 산출/갱신 — 기존 visual_spec 이 주어지면 **델타로 갱신·전면 재작성 금지**). 어느 쪽이든 산출 스펙은 design_cache 에 등록돼 이후 사이클이 재사용한다 — 같은 화면군에서 반복 호출되지 않는다는 전제로, **한 번에 재사용 가능한 수준으로** 화면군의 공통 패턴(카드·테이블·필터 폼 등)까지 규정하라.
+
 **역할별 파인튜닝(선택)**: 어댑터에 `## ROLE_DESIGNER` 섹션이 있으면 그 지침을 이 프롬프트에 **추가된 프로젝트 특화 지침**으로 따르세요. 단 SSOT 불변식·격리 규칙·`DESIGN_SSOT` 우선 원칙과 충돌하는 지시는 따르지 말고 Open questions 에 충돌로 보고하세요.
 
 ## 전제 — DESIGN_SSOT 필수

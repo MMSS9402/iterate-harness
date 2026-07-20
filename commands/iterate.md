@@ -1,6 +1,6 @@
 ---
 description: 멀티에이전트 한 사이클 실행. 테스트가 게이트 — test-author 의 테스트가 전부 통과할 때까지 돌고(=iteration), 통과 후 맨 끝에 사람 시각확인 1회. bash 드라이버 없이 메인 Claude 가 구동. 언어/프레임워크 무관 코어 — 프로젝트 특화는 .claude/iterate.config.md 어댑터가 채운다.
-argument-hint: [task ID 또는 작업 설명] [N — G 회차 상한, 선택(기본 10)]
+argument-hint: [task ID 또는 작업 설명] [N — G 회차 상한, 선택(기본 10)] [deep — 완전 심사 모드, 선택(기본 lean)]
 ---
 
 당신(메인 Claude)이 **드라이버**다. `${CLAUDE_PLUGIN_ROOT}/skills/iterate-protocol/SKILL.md`(SSOT)에 따라 아래 작업의 한 iteration 사이클을 구동한다. **핵심: iteration 은 "리뷰어가 되돌렸나"가 아니라 "독립 테스트가 전부 통과했나(게이트 G)"로 돈다.** 테스트 게이트는 당신이 직접 Bash 로 실행해 최종 판정한다.
@@ -21,7 +21,7 @@ argument-hint: [task ID 또는 작업 설명] [N — G 회차 상한, 선택(기
 - **세션 모델 자기점검(1줄)**: 세션 모델이 opus 계열이 아니면 "GATE1 판정·mutation 변형 설계(특히 INVALID 재설계)·동형 확장 프롬프트 품질은 드라이버=세션 모델을 따른다 — opus 세션 권장" 을 경고하고 계속 여부를 사용자에게 1줄 확인한다(게이트 변경 아님 — 진행 자체는 허용).
 
 ### 0b) 카드 해석
-- **인자 파싱**: `$ARGUMENTS` 에서 따옴표 토큰 = ID 또는 작업 설명, **맨 뒤 정수 = N(G 회차 상한, 기본 10)**.
+- **인자 파싱**: `$ARGUMENTS` 에서 따옴표 토큰 = ID 또는 작업 설명, **맨 뒤 정수 = N(G 회차 상한, 기본 10)**, **`deep` 토큰 = deep 모드**(없으면 **lean 기본** — SSOT §실행 모드: G2 델타 심사·reviewer 1패스·explorer 큐·designer 캐시. 기계 게이트는 모드 무관 동일). 모드를 회차 보고 첫 줄에 명시한다.
 - **`PLAN_PATH` 설정 시**: ID 면 원장에서 카드 블록만 읽는다 — **파일이 크면 통째 Read 금지**: Grep 으로 카드 헤더(`### .* <ID>`) 줄번호를 찾아 그 offset 부터 카드 블록만 Read(드라이버 컨텍스트 보호). 못 찾으면 알리고 중단.
 - **`PLAN_PATH` 미설정 시(직접 작업 문자열 모드)**: 인자 문자열 자체가 작업이다(원장 조회·완료기록 갱신 없음 — §7 스킵, §8 보고만).
 - **카드 플래그 판정**: `design`(새 시각 표면)·`human-visual`(사람 눈 필요)·`e2e`(헤드리스 미렌더 표면)·`explore`(사용자 흐름이 얽힌 화면·상태 많은 표면 — 명세 밖 탐색 QA 가치). 카드에 명시 없으면 작업 성격으로 판정. 모호하면 사용자 1줄 확인. **`design`↔`DESIGN_SSOT`·`human-visual`↔`HUMAN_GATE`·`e2e`↔`E2E_CMD`·`explore`↔`EXPLORE_QA` — 플래그인데 대응 필드 미설정 → 어댑터 보강을 요청하고 중단.** e2e 플래그면 추가로 `E2E_CMD` 가 실행하는 테스트 경로(어댑터 주석·커맨드 인자로 확인)가 동결 열거(`TEST_FILE_GLOB` ∪ `TEST_SUPPORT_GLOBS` 의 find 절)에 덮이는지 확인 — 안 덮이면 implementer 의 e2e 테스트 변조를 동결 체크섬·가드가 못 잡으므로 어댑터 보강 요청 후 중단.
@@ -31,7 +31,7 @@ argument-hint: [task ID 또는 작업 설명] [N — G 회차 상한, 선택(기
 
 **★ 역할 에이전트는 플러그인 네임스페이스**: 이 문서의 `Agent(architect)` 표기는 축약이다 — 실제 `subagent_type` 은 `iterate-harness:architect`·`iterate-harness:designer`·`iterate-harness:test-author`·`iterate-harness:test-auditor`·`iterate-harness:implementer`·`iterate-harness:reviewer`·`iterate-harness:explorer` 다(플러그인 에이전트는 항상 `플러그인명:이름` 으로 노출된다). `Explore` 만 빌트인 그대로다.
 
-**★ 모든 `Agent()` 호출은 포그라운드**: 매번 `run_in_background: false` 를 명시한다(Agent 도구 기본값은 백그라운드다 — 명시 없으면 사용자가 원치 않는 백그라운드로 뜬다). 완료된 에이전트를 `SendMessage` 로 재개하지 마라 — 그 경로는 항상 백그라운드고 포그라운드 옵션이 없다. 반려/바운스(test-author 보강, reviewer 재확인 등)도 매번 **새 `Agent` 호출**로 띄우고, 필요한 맥락은 프롬프트로 전달한다(에이전트가 디스크의 현재 테스트/코드를 직접 Read). 검사자(test-auditor·reviewer·explorer) 산출물을 바운스로 전달할 때는 **발견 항목**(Escapes/갭/결함의 변형 설명·재현 경로)만 넘기고, Verdict·Covered·체크리스트 등 판정 서사와 피검사자의 수정 설명은 전달하지 않는다(spec_gap/test_dispute 보고 전달은 escape 규정대로). `Workflow` 등 백그라운드 도구도 이 하네스에선 금지.
+**★ 모든 `Agent()` 호출은 포그라운드**: 매번 `run_in_background: false` 를 명시한다(Agent 도구 기본값은 백그라운드다 — 명시 없으면 사용자가 원치 않는 백그라운드로 뜬다). 완료된 에이전트를 `SendMessage` 로 재개하지 마라 — 그 경로는 항상 백그라운드고 포그라운드 옵션이 없다. 반려/바운스(test-author 보강, reviewer 재확인 등)도 매번 **새 `Agent` 호출**로 띄우고, 필요한 맥락은 프롬프트로 전달한다(에이전트가 디스크의 현재 테스트/코드를 직접 Read). 검사자(test-auditor·reviewer·explorer) 산출물을 바운스로 전달할 때는 **발견 항목**(Escapes/갭/결함의 변형 설명·재현 경로)만 넘기고, Verdict·Covered·체크리스트 등 판정 서사와 피검사자의 수정 설명은 전달하지 않는다(spec_gap/test_dispute 보고 전달은 escape 규정대로). `Workflow` 등 백그라운드 도구도 **이 사이클 안에선** 금지(예외는 `/iterate-qa` 배치 한정 — SSOT §에이전트 독립성).
 
 **★ 전후 다이제스트 가드 공통(위반 기록)**: 아래 4곳 가드(§1 test-author 소스 루트·§1 implementer 지원파일·§4 reviewer·§4b explorer)에서 호출 '전' 다이제스트 계산 시 내부 커맨드 원시 출력을 `tee "$ARTIFACTS_DIR/.guard_pre.txt"` 로도 저장한다(gitignore 된 ARTIFACTS_DIR 라 다이제스트에서 자연 제외 — happy path 비용은 tee 1회). 불일치 시 내부 커맨드를 재실행해 `.guard_pre.txt` 와 diff 한 것(위반분만 분리)을 상한 200줄로 `$ARTIFACTS_DIR/violations.md` 에 `[회차 N·역할 R·검출 지점]` 헤더로 append 한 뒤 원복 지시한다. violations.md 는 파일로만 쌓고 당신 응답엔 1줄 요약만.
 
@@ -39,10 +39,11 @@ argument-hint: [task ID 또는 작업 설명] [N — G 회차 상한, 선택(기
 - **A architect**: `Agent(architect)` ← 작업 + Explore 결과. 설계+AC+**카드 플래그** 보존. architect Card flags 가 0b 잠정 판정과 다르면 architect 판정으로 갱신한다 — 단 (i) **플래그 제거 방향**(0b 또는 원장에서 판정된 design/human-visual/e2e/explore 를 끄는 쪽)이면 사용자 1줄 확인 필수(원장 명시 플래그는 architect 가 제거 불가), (ii) **플래그 추가 방향**이면 0b 의 어댑터 필드 검사(design↔DESIGN_SSOT·human-visual↔HUMAN_GATE·e2e↔E2E_CMD·explore↔EXPLORE_QA)를 그 시점에 재실행 — 미설정이면 어댑터 보강 요청 후 중단(0b 와 동일 규칙). 산출은 당신이 `$ARTIFACTS_DIR/plan.md` 로 Write 한다(직전 회차분이 있으면 먼저 `plan.prev.md` 로 이동 — 재실행 시 diff 기계 판정용, §2 참조).
   - **GATE1(당신 직접)**: 설계에 코드 본문 없음 + estLines 전부 ≤ `$FILE_LINE_LIMIT` 확인. 위반→architect 재호출. plan.md Open questions 에 `[blocking]` 항목이 있으면 진행 중단, 사용자에게 각 1줄 확인 → 답을 architect 재호출 프롬프트로 전달해 AC 에 반영시킨 뒤 진행(non-blocking 은 기록만 하고 통과).
   - **spec.md 발췌(GATE1 통과 직후·당신 직접)**: plan.md 에서 **Card flags·Interface·Acceptance Criteria·Visual 섹션만 발췌**해 `$ARTIFACTS_DIR/spec.md` 로 Write 한다(출제자·검사자 전달용 — Files/Reuse/Rationale/Notes 비포함). plan.md 를 새로 Write 한 회차마다 재발췌한다(Notes-only diff 회차는 AC·Interface 불변이므로 기존 spec.md 유효).
-- **designer (design 플래그면)**: `Agent(designer)` ← 작업 + architect 설계 + `$DESIGN_SSOT`. 시각 스펙 산출 — 당신이 `$ARTIFACTS_DIR/visual_spec.md` 로 Write. **구현 전**에 둬 구조를 한 번에 맞춘다. (design 아니면 생략.) 디자이너 Open Question(새 토큰 등)은 당신이 사용자에 확인.
+- **designer (design 플래그면)**: **★캐시 판정 먼저(당신 직접·SSOT §카드 플래그 design)**: `$ARTIFACTS_DIR/design_cache.md` 에서 대상 화면군의 visual_spec 항목과 그 산출 시점 `DESIGN_SSOT` 다이제스트를 읽고, `shasum <DESIGN_SSOT 경로>` 현재값과 대조 — **일치 + 이번 카드가 기존 화면군의 확장(신규 시각 표면 아님)이면 designer 스킵·기존 `visual_spec.md` 재사용**(보고 1줄). 캐시 미스(신규 표면·SSOT 변경·스펙 부재)면 `Agent(designer)` ← 작업 + architect 설계 + `$DESIGN_SSOT`. 시각 스펙 산출 — 당신이 `$ARTIFACTS_DIR/visual_spec.md` 로 Write 하고 `design_cache.md` 에 `[화면군] visual_spec 경로 · DESIGN_SSOT shasum` 1줄 append. **구현 전**에 둬 구조를 한 번에 맞춘다. (design 아니면 생략.) 디자이너 Open Question(새 토큰 등)은 당신이 사용자에 확인. 스펙만 갱신하고 싶으면 사이클 밖 `/iterate-harness:iterate-design` 을 안내.
 - **T test-author**: `Agent(test-author)` ← `$ARTIFACTS_DIR/spec.md` 경로(드라이버 발췌본 — **plan.md 원문 경로는 주지 않는다**) + (design면) `visual_spec.md` 경로. **모든 카드.** AC 를 독립 블랙박스 테스트로(구현 안 봄·명세에서). 부수효과 되읽기·분기 양쪽·불변식 구체값(불변식 11). (e2e 카드) E2E 시나리오 테스트도 test-author 산출물이다 — AC 에서 도출하며, 동결 글롭 안 경로에만 작성.
   - **소스 루트 불가침 가드(당신 직접)**: 호출 전후로 `{ git status --porcelain <소스 루트>; git diff HEAD -- <소스 루트>; git ls-files -o --exclude-standard -z <소스 루트> | xargs -0 shasum; } | shasum` 을 비교 — 달라졌으면 test-author 가 소스 루트를 건드린 것(도구상 Write/Edit 가 소스에도 미침) → 원복 지시 후 재호출. (★ `git status --porcelain | shasum` 단독은 상태 전용이라 이미-dirty/untracked 파일의 **내용** 변조를 못 잡는다 — diff+untracked 내용 해시까지 포함. `--exclude-standard` 로 gitignore 된 `$ARTIFACTS_DIR` 는 자연 제외.)
 - **G2 test-auditor (동결 전·독립)**: `Agent(test-auditor)` ← `$ARTIFACTS_DIR/spec.md` 경로(발췌본 — plan.md 원문 비전달) + (design면) `visual_spec.md` 경로 + test-author 가 쓴 테스트 파일(**구현 안 봄**). "틀린 구현이 빠져나갈 변형"을 적대 검사.
+  - **★델타 심사(lean·재심사 한정 — SSOT §GATE2)**: 카드 **최초 G2 는 전체 심사**. 재심사(환원·반려 보강·mutation 생존 추가)면 당신이 직전 동결 `.sha256` 과 현재 파일을 `shasum` 대조해 **변경·신규 테스트 파일 목록**을 산출하고, test-auditor 프롬프트에 그 목록 + "심사 스코프 = 이 파일들 전체 + 해당 AC + 기존 커버리지와의 상호작용(매트릭스) + 직전 Escapes 회귀 부록. **체크섬 불변 파일의 직전 escapes-0 판정은 유효 — 재판정 불요**" 를 명시한다. deep 모드는 매번 전체 재심사(기존 규정 그대로).
   - **형식검사(당신 직접)**: 산출물에 `## Mutant checklist` 섹션 부재, 또는 Escapes/Covered 항목의 checklist ID 참조·'후행 발견' 표기 누락 시 test-auditor 재호출(GATE1·마커 형식검사와 동일 관행).
   - **`## AC defects` ≥1 → test-author 반려가 아니라 architect 재계획으로 라우팅**(designer→test-author→G2 전체 재흐름, 반려 상한 2회에 합산 — 소진 시 기존대로 중단·사용자 개입).
   - 판정 수신 직후 당신이 `$ARTIFACTS_DIR/g2_verdicts.md` 에 `## [<카드 ID/작업 슬러그> · 회차 N · G2 라운드 R]` 헤더로 산출물에서 **`## Mutation targets` 를 제외한** 전문(Mutant checklist/Escapes/Covered/AC defects/Out-of-scope/Verdict)을 append 한다(반려 재검사 포함 매 호출). Mutation targets 는 ARTIFACTS_DIR 에 쓰지 않고 동결 다이제스트와 같은 방식으로 **당신의 응답 텍스트(대화 컨텍스트)에만 기록**한다 — implementer 는 대화 컨텍스트를 읽지 못한다(§2b 기밀 규칙).
@@ -138,10 +139,12 @@ ${TIMEOUT:-$(command -v timeout||command -v gtimeout)} 300 $E2E_CMD > /tmp/g_e2e
 - **게이트가 0 fail 이 된 뒤** `Agent(reviewer)` 호출 ← `$ARTIFACTS_DIR/plan.md` 경로(**"Context·Card flags·Files·Reuse·Interface·AC·Visual 섹션만 읽어라 — Rationale·Notes 노출 금지"** 를 프롬프트에 명시, SSOT reviewer 예외 규정에 따른 섹션 제한 — test-author 의 spec.md 제한과 달리 reviewer 는 plan.md 에서 Rationale·Notes 만 차단, Card flags 는 사람 게이트 몫 분류에 필요해 허용) + 변경 + "테스트가 *놓친* 결함을 사냥하라(도장 금지)". reviewer 는 accept/reject 가 아니라 **갭 목록**을 낸다. 산출물에 `## Expected` 섹션이 없으면 재호출. 판정 수신 직후 당신이 `$ARTIFACTS_DIR/reviewer_verdicts.md` 에 같은 헤더 형식(`## [<카드> · 회차 N]`)으로 Gaps/Checklist ✗ 항목/Verdict + 환원 라우팅 결과(어느 갭이 test-author 케이스로 갔는지) 1줄을 append 한다.
 - 호출 후 같은 커맨드로 재비교 — 달라졌으면 reviewer 가 파일을 수정한 것(Bash 보유라 도구로 못 막음 — 수정 금지는 지시문) → 원복 지시. (reviewer_raw.txt 기록은 예외라 다이제스트 대상에서 제외: gitignore 된 `$ARTIFACTS_DIR` 는 `git status`/`--exclude-standard` 모두 안 세므로 자연 제외된다.)
 - **갭 ≥1** → 종류별로: 데모/제품을 깨는 결함 → 그 케이스를 test-author 에 추가시킴 → **G2 재심사(escapes 0)→재동결** → **게이트 재진입**(fail→fix 루프) / 중복·죽은코드 → implementer 가 정리 → **게이트 재진입**. 비차단 잠복은 Notes 로만 기록. (테스트 변경은 경로 불문 G2→재동결을 거친다 — 이 관문 없이 스냅샷 갱신 금지.)
+  - **★수렴 규칙(lean 기본 — SSOT §실행 모드)**: reviewer **본심사는 카드당 1회**다. 본심사의 갭이 전부 환원되어 게이트가 다시 green 이면 **갭 해소로 판정하고 reviewer 를 재호출하지 않는다**(신규 갭 재사냥은 G2 델타 심사+mutation 이 백스톱). **deep 모드에서만** 갭 0 이 나올 때까지 재사냥을 반복한다. 단 lean 이어도 환원 과정에서 **구현이 새 표면을 추가**했으면(테스트 보강만이 아니라 소스 신규 파일/공개 인터페이스 변경) 그 표면에 한정한 재검토 1회를 허용한다.
   - **★ 동형 확장(일괄 시정)**: 갭을 재계획으로 넘기기 전에 당신이 architect 프롬프트에 **"이 갭과 동형인 결함 표면(같은 원인·다른 소비처)을 전수 나열해 한 회차에 묶어라"** 를 명시한다. reviewer 가 **같은 원인 계열 태그**로 묶은 항목(Notes 포함)을 그대로 architect 재검토 대상에 포함시킨다 — 원인 동형성 판정은 reviewer 산출물의 태그를 따르고 당신이 내용을 재분류하지 않는다. 갭 항목에 태그가 누락되면 내용 판단 없이 reviewer 에 형식 보완(태그 부착 재출력)만 재요청한다(architect 프롬프트의 '동형 표면 전수 나열' 지시는 유지 — 태그 누락 백스톱). 같은 원인의 표면을 회차마다 하나씩 발견해 재파이프라인을 반복하는 것이 최대 낭비 지점이다(실측: 동형 갭 분할 발견 1회 = 재파이프라인 1회 ≈ 1시간).
-- **갭 0** → (explore 플래그면 §4b 로 / 아니면) 자동 green 후보. (간결화는 별도 polish 단계가 아니라 reviewer 가 잡으면 implementer 가 고치는 일반 수정.)
+- **갭 해소**(lean: 본심사 갭 전부 환원·게이트 green / deep: 재사냥 갭 0) → (explore 플래그면 §4b 로 / 아니면) 자동 green 후보. (간결화는 별도 polish 단계가 아니라 reviewer 가 잡으면 implementer 가 고치는 일반 수정.)
 
-## 4b) explorer (explore 플래그 카드만 — reviewer 갭 0 후·자동 green 확정 직전)
+## 4b) explorer (explore 플래그 카드만)
+- **★lean(기본) = 큐 등록만(SSOT §카드 플래그 explore)**: reviewer 갭 해소 후, `$ARTIFACTS_DIR/qa_queue.md` 에 `## [<카드 ID> · <날짜>]` 헤더로 **카드 요약·AC 1줄·변경 파일 목록·탐색 초점(EXPLORE_QA 초점 중 해당분)·시드/기동 힌트**를 append 하고 §5 로 진행한다(카드 상태 = `green (QA 대기)` — §7·§8 에 명기). 실제 탐색은 사용자가 `/iterate-harness:iterate-qa` 로 배치 실행. **인라인 탐색은 deep 모드 또는 카드에 `explore-inline` 명시 시에만** 아래 절차로:
 - 전제: 어댑터 `EXPLORE_QA` 설정(미설정이면 Step 0b 에서 이미 차단). 호출 전 `{ git status --porcelain .; git diff HEAD -- .; git ls-files -o --exclude-standard -z . | xargs -0 shasum; } | shasum` 기록(★ 상태 전용 shasum 은 dirty/untracked 내용 변조 미탐 — reviewer 백스톱과 동일 커맨드) + `mkdir -p "$ARTIFACTS_DIR/explore"`.
 - `Agent(explorer)` 호출 ← 카드/AC 요약 + 변경 파일 목록 + 어댑터 `EXPLORE_QA`(기동법·조작 도구·초점) + **시간상자**(기본 탐색 흐름 5~8개). explorer 는 명세 밖(인접 흐름·빈/대량 데이터·중단·역행·연타·경계 밖 입력)을 실물로 구동하고, 일회성 탐색 스크립트·증거는 `$ARTIFACTS_DIR/explore/` 에만 쓴다(동결 glob 밖 — test/·소스 루트 금지).
 - 호출 후 같은 커맨드로 재비교 — 달라졌으면 explorer 가 제품/테스트를 수정한 것 → 원복 지시(ARTIFACTS_DIR 는 gitignore 라 자연 제외).
@@ -160,8 +163,8 @@ ${TIMEOUT:-$(command -v timeout||command -v gtimeout)} 300 $E2E_CMD > /tmp/g_e2e
             AND (e2e 없음 OR E2E_EXIT==0)
             AND 어댑터 GUARDS 위반 0 (줄-상한 GUARD 포함)
             AND MUT_SURVIVED==0 (Mutation 게이트 생존 0, INVALID 제외)
-            AND reviewer 갭 0
-            AND (explore 없음 OR explorer 결함 0)
+            AND reviewer 갭 해소 (lean: 본심사 1회 갭 전부 환원·게이트 green / deep: 재사냥 갭 0)
+            AND (explore 없음 OR lean: qa_queue 등록 완료 OR deep·explore-inline: explorer 결함 0)
 ```
 자동 green 까지 루프, **MAX_ITERS = N(기본 10) 하드 상한**. 초과·같은 fail 2회 연속 동일원인 미해결 시 중단·사용자 개입.
 
@@ -173,18 +176,19 @@ ${TIMEOUT:-$(command -v timeout||command -v gtimeout)} 300 $E2E_CMD > /tmp/g_e2e
 - human-visual 없는 순수 로직 카드 → 자동 green = done.
 
 ## 7) 완료기록 갱신 (`PLAN_PATH` 설정 시만)
-`$PLAN_PATH` 카드 완료기록: 상태·**G 회차(테스트 N개·1회차 M fail→…→0 fail 추이)**·`mutation M개 중 K kill(중간 회차 생존 발견 총 S건)`·날짜·플래그·특이사항(violations.md 발생 건은 `[회차·역할·요지]` 요약 필수 기재).
+`$PLAN_PATH` 카드 완료기록: 상태·**G 회차(테스트 N개·1회차 M fail→…→0 fail 추이)**·`mutation M개 중 K kill(중간 회차 생존 발견 총 S건)`·날짜·플래그·**모드(lean/deep)**·특이사항(violations.md 발생 건은 `[회차·역할·요지]` 요약 필수 기재).
 - **human-visual 카드**: 자동 green = **'verification passed'**, `실기 시각확인 날짜: –`. 사람 OK 후 채워야 **'done'**.
+- **explore 큐 카드(lean)**: 자동 green = **'green (QA 대기)'** — `/iterate-qa` 배치가 결함 0 확인 시 done 으로 갱신(결함 발견 시 해당 카드 `/iterate` 재실행 안내).
 - 그 외: 자동 green = done.
 - `PLAN_PATH` 미설정(직접 작업 문자열 모드)이면 원장 갱신 생략 — §8 종료 보고만.
 
 ## 8) 종료 보고
 ```
 ## Iteration 완료
-**카드/작업**: <ID 또는 설명> · **플래그**: [design/human-visual/e2e/explore] (판정: 원장 명시/architect/드라이버 0b/사용자 확인) · **회차**: X (테스트 N개, 1회차 M fail → 0 fail)
+**카드/작업**: <ID 또는 설명> · **모드**: lean|deep · **플래그**: [design/human-visual/e2e/explore] (판정: 원장 명시/architect/드라이버 0b/사용자 확인) · **회차**: X (테스트 N개, 1회차 M fail → 0 fail)
 **변경 파일**: …
-**게이트**: 테스트 N/N · LINT 무경고 · GUARDS(줄상한 포함) OK · E2E(해당 시) K/K · mutation M개 중 K kill(생존 발견 총 S건) · reviewer 갭 0 · explore(해당 시) 결함 0
-**explorer 발견→테스트화**: <있었으면 무엇> | 없음 | (explore 아님)
+**게이트**: 테스트 N/N · LINT 무경고 · GUARDS(줄상한 포함) OK · E2E(해당 시) K/K · mutation M개 중 K kill(생존 발견 총 S건) · reviewer 갭 해소(발견 G건→환원) · explore(해당 시) 결함 0 | QA 큐 등록
+**explorer 발견→테스트화**: <있었으면 무엇> | 없음 | QA 큐 등록(/iterate-qa 대기) | (explore 아님)
 **reviewer 발견→테스트화**: <있었으면 무엇> | 없음
 **완료 상태**: done | verification passed (실기 시각확인 대기)
 **특이사항**: 1~2줄(잠복/후속 Note 포함 · violations.md 발생 건은 [회차·역할·요지] 요약 필수)
