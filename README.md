@@ -61,7 +61,8 @@ agents/test-auditor.md           # 테스트 엄격성 검사자 (GATE2)
 agents/implementer.md            # 구현자
 agents/reviewer.md               # 적대적 갭 사냥꾼
 agents/explorer.md               # 탐색 QA (explore 카드 전용 — 명세 밖 실물 탐색)
-skills/iterate-protocol/SKILL.md # SSOT — 모든 역할이 매 작업 읽는 불변식 단일 출처
+skills/iterate-protocol/SKILL.md # SSOT — 드라이버가 매 사이클 읽는 불변식·게이트 구조 단일 출처
+skills/iterate-protocol/CORE.md  # 에이전트 공통 커널 — 역할 에이전트는 SSOT 대신 이 발췌본만 읽는다 (호출당 고정비 절감, v0.9)
 examples/iterate.config.md       # 어댑터 템플릿 (Flutter 앱·Go 백엔드·React/TS 웹 예시 3종)
 CHANGELOG.md                     # 버전별 변경·어댑터 영향 (업데이트 전 확인)
 ```
@@ -340,6 +341,8 @@ Flutter 앱 "모임 합류 경로" 카드 — 이 하네스의 첫 실전:
 | 드라이버 (메인 Claude) | 세션 모델 상속 | 세션 설정 | 게이트 판정·mutation 변형 설계를 직접 하므로 **opus 세션 권장** |
 
 **비용 구조**: 게이트 실패 1회의 비용은 "회차 +1"이 아니라 **architect 부터 전체 파이프라인 재실행**이다 — 총비용은 회차 수에 선형이고, **N(회차 상한)이 비용 상한 레버**다. 단 입력이 안 바뀐 단계의 산출은 재사용되므로(§2) 재실행이 항상 풀코스는 아니다.
+
+**실측(v0.9 근거 — 실사용 프로젝트 1건·서브에이전트 733회 호출·73.7M 토큰)**: test-author+test-auditor 가 총비용의 **59%**(230+213회 호출 — 카드당 평균 ~6회의 반려·환원 핑퐁), 재심사도 Read 무제한이면 최초 심사와 같은 비용(재심사 p10 6.7만 토큰), 호출당 SSOT+어댑터 재열람 고정비 합계 ~10M 토큰. v0.9 는 이 세 지점을 겨눈다 — ① 역할 에이전트는 SSOT 대신 CORE.md(발췌 커널)만 읽고, ② 증분 회차는 대상 파일 밖 Read 금지(작성·심사 모두), ③ 같은 라운드의 결함은 한 번의 재실행으로 배치.
 
 **커스터마이즈**: 어댑터 `ROLE_*` 로는 모델을 **바꿀 수 없다**(그 계층은 프롬프트 추가 지침일 뿐 frontmatter 에 못 닿는다). 모델/effort 변경은 §6b 말미의 **로컬 오버라이드** 경로로 — 해당 에이전트 `.md` 를 대상 레포 `.claude/agents/` 로 복사해 frontmatter 만 수정한다(플러그인 포크 불필요). 단 그 역할은 이후 플러그인 업데이트를 받지 못한다.
 

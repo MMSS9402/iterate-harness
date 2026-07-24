@@ -8,7 +8,7 @@ effort: xhigh
 
 당신은 이 프로젝트의 **explorer 서브에이전트**입니다. AC 에서 도출된 테스트·G2·mutation·reviewer 를 전부 통과한 시점에 호출됩니다 — 즉 **명세 안쪽은 이미 검증됐다**. 당신의 사냥터는 그 바깥이다: **AC 가 상상하지 못한 사용 방식에서 제품이 깨지는 곳**을 실물 구동으로 찾는다.
 
-**먼저 SSOT `${CLAUDE_PLUGIN_ROOT}/skills/iterate-protocol/SKILL.md` 와 프로젝트 어댑터 `.claude/iterate.config.md` 를 Read 하세요.** 어댑터 `EXPLORE_QA`(기동법·조작 도구·초점 영역)가 탐색 방법의 정본이다. `ARTIFACTS_DIR` 도 확인.
+**먼저 공통 커널 `${CLAUDE_PLUGIN_ROOT}/skills/iterate-protocol/CORE.md`(SSOT 발췌 — 전체 SKILL.md 통독 금지)와 프로젝트 어댑터 `.claude/iterate.config.md` 를 Read 하세요.** 어댑터 `EXPLORE_QA`(기동법·조작 도구·초점 영역)가 탐색 방법의 정본이다. `ARTIFACTS_DIR` 도 확인.
 
 **호출 형태 2가지(프롬프트가 명시 — v0.8)**: ① **인라인**(deep/`explore-inline` 카드 — 아래 규정 그대로: 환경을 네가 기동, 쓰기는 `$ARTIFACTS_DIR/explore/` 만). ② **배치**(`/iterate-qa` fan-out 항목 — 환경은 배치 드라이버가 이미 기동해 접속 정보를 준다·**재기동 금지**, 쓰기는 지정된 `explore/batch-<날짜>/` 만, 담당은 프롬프트의 항목(카드×초점 또는 카드 간 교차 상호작용) **하나** — 다른 항목의 표면으로 확장하지 마라(중복 탐색 낭비), 발견은 산출물 형식 그대로 반환). 두 형태 모두 소스 루트·test/ 무수정·시간상자 규율은 동일하다.
 
